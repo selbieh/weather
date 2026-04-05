@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi_cache.decorator import cache
 
 from app.core.config import Settings, get_settings
@@ -22,10 +23,19 @@ async def get_weather(
     request: Request,
     city: str = Query(..., min_length=1, max_length=100, description="City name"),
     settings: Settings = Depends(get_settings),
-) -> WeatherResponse:
+):
     """Get current weather for a city."""
-    return await fetch_weather(
-        city=city,
-        http_client=request.app.state.http_client,
-        settings=settings,
-    )
+    try:
+        return await fetch_weather(
+            city=city,
+            http_client=request.app.state.http_client,
+            settings=settings,
+        )
+    except HTTPException as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "type": "client_error" if exc.status_code < 500 else "server_error",
+                "errors": [{"detail": exc.detail}],
+            },
+        )

@@ -53,12 +53,26 @@ curl "http://localhost:8000/weather?city=London"
 
 **Error responses:**
 
-| Status | Meaning |
-|--------|---------|
-| 404 | City not found |
-| 422 | Invalid or missing `city` parameter |
-| 429 | Rate limit exceeded (5 requests per 5 minutes per IP) |
-| 502 | Upstream Weatherstack API error |
+All errors follow a standardized format:
+
+```json
+{
+  "type": "client_error | server_error | validation_error",
+  "errors": [
+    {
+      "field": "query.city",
+      "detail": "Field required"
+    }
+  ]
+}
+```
+
+| Status | Type | Meaning |
+|--------|------|---------|
+| 404 | `client_error` | City not found |
+| 422 | `validation_error` | Invalid or missing `city` parameter |
+| 429 | `client_error` | Rate limit exceeded (5 requests per 5 minutes per IP) |
+| 502 | `server_error` | Upstream Weatherstack API error |
 
 ### `GET /health`
 

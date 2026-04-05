@@ -13,5 +13,11 @@ class WeatherResponse(BaseModel):
     observation_time: str
 
 
-class ErrorResponse(BaseModel):
+class ErrorDetail(BaseModel):
+    field: str | None = None
     detail: str
+
+
+class ErrorResponse(BaseModel):
+    type: str
+    errors: list[ErrorDetail]
