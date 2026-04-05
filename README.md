@@ -57,8 +57,22 @@ curl "http://localhost:8000/weather?city=London"
 |--------|---------|
 | 404 | City not found |
 | 422 | Invalid or missing `city` parameter |
-| 429 | Rate limit exceeded (10 requests/minute per IP) |
+| 429 | Rate limit exceeded (5 requests per 5 minutes per IP) |
 | 502 | Upstream Weatherstack API error |
+
+### `GET /health`
+
+Returns service health status — useful for container orchestration readiness/liveness probes.
+
+```bash
+curl "http://localhost:8000/health"
+```
+
+```json
+{
+  "status": "healthy"
+}
+```
 
 Interactive API docs are available at [`/docs`](http://localhost:8000/docs).
 
@@ -100,7 +114,7 @@ uv run pytest
 
 - **Weatherstack free tier** uses HTTP only (not HTTPS). The default base URL reflects this.
 - **In-memory cache** (5-minute TTL) — appropriate for single-process deployments. No external dependencies needed.
-- **Rate limiting** is per-IP at 10 requests/minute using slowapi. Cached responses do not consume rate-limit tokens.
+- **Rate limiting** is per-IP at 5 requests per 5 minutes using slowapi. Cached responses do not consume rate-limit tokens.
 - The API returns a **curated subset** of Weatherstack fields, decoupling the public contract from the upstream provider.
 - City names are **normalised** (lowercased, trimmed) before calling Weatherstack to improve cache hit rates.
 
@@ -110,9 +124,6 @@ Given more time, I would add:
 
 - **Redis cache backend** for multi-worker / multi-instance deployments
 - **Structured logging** (e.g. structlog) with request correlation IDs
-- **Health check endpoint** (`/health`) for container orchestration readiness/liveness probes
 - **API key authentication** for consumers of this service
 - **HTTPS** via a reverse proxy (nginx / Traefik) in front of Uvicorn
 - **CI/CD pipeline** with linting (ruff), type checking (mypy), and automated tests
-- **OpenTelemetry tracing** for observability across service boundaries
-- **Graceful degradation** — serve stale cache if Weatherstack is down

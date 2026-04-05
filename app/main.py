@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["10/minute"],
+    default_limits=["5/5minutes"],
 )
 
 
@@ -36,3 +36,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 from app.routers.weather import router as weather_router  # noqa: E402
 
 app.include_router(weather_router)
+
+
+@app.get("/health", tags=["health"])
+async def health_check():
+    return {"status": "healthy"}
