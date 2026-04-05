@@ -11,8 +11,8 @@ router = APIRouter(tags=["weather"])
 
 @router.get(
     "/weather",
-    response_model=WeatherResponse,
     responses={
+        200: {"model": WeatherResponse, "description": "Weather data"},
         404: {"model": ErrorResponse, "description": "City not found"},
         429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         502: {"model": ErrorResponse, "description": "Upstream service error"},
