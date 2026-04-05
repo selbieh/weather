@@ -19,6 +19,7 @@ limiter = Limiter(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     FastAPICache.init(InMemoryBackend())
+    # single shared client — avoids opening a new connection per request
     app.state.http_client = httpx.AsyncClient(timeout=10.0)
     yield
     await app.state.http_client.aclose()
@@ -34,6 +35,11 @@ app = FastAPI(
 app.state.limiter = limiter
 
 
+# --- Standardized error handlers ---
+# Every error response follows the same shape: {type, errors[{field?, detail}]}
+# so consumers only need to handle one format.
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
@@ -47,6 +53,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # flatten pydantic's loc tuples into dotted paths (e.g. "query.city")
     return JSONResponse(
         status_code=422,
         content={
@@ -75,8 +82,11 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
+    # the @cache decorator swallows HTTPException and re-raises as plain Exception,
+    # so we need to catch it here and route it back to the right handler
     if isinstance(exc, HTTPException):
         return await http_exception_handler(request, exc)
+    # don't leak internals — just return a generic message
     return JSONResponse(
         status_code=500,
         content={
@@ -86,7 +96,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Import router after app is created to avoid circular imports
+# import after app is created to avoid circular imports
 from app.routers.weather import router as weather_router  # noqa: E402
 
 app.include_router(weather_router)

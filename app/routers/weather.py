@@ -32,6 +32,8 @@ async def get_weather(
             settings=settings,
         )
     except HTTPException as exc:
+        # catch here because @cache swallows exceptions and breaks
+        # FastAPI's normal exception handling pipeline
         return JSONResponse(
             status_code=exc.status_code,
             content={
